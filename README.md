@@ -2,6 +2,8 @@
 
 [[Paper]](https://arxiv.org/pdf/1901.00303.pdf) [[dataset]](https://github.com/MeioJane/SIXray)
 
+![Illustration](illustration.png)
+
 ## Requirements
 [Conda virtual environment](https://conda.io/docs/user-guide/tasks/manage-environments.html) is recommended: `conda env create -f environment.yml`
 
