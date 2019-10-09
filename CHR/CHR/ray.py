@@ -94,7 +94,7 @@ class XrayClassification(data.Dataset):
             if not os.path.exists(path_csv):  # create dir if necessary
                 os.makedirs(path_csv)
             # generate csv file
-            labeled_data = read_object_labels(self.root, self.set)
+            labeled_data = read_object_labels_csv(self.root, self.set)
             # write csv file
             write_object_labels_csv(file_csv, labeled_data)
 
