@@ -22,7 +22,8 @@
     cd CHR/
     bash CHR/runme.sh
     ```
-
+## Checkpoint
+If you only want to test images, you can download[Resnet101-CHR](https://pan.baidu.com/s/1dLgB8vpNccr_yoSvLkIOnQ)
 ## Citation 
 If you use the code in your research, please cite:
 
