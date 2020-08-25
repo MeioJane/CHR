@@ -19,7 +19,6 @@
 
 2. Run the training demo: 
     ```bash
-    cd CHR/
     bash CHR/runme.sh
     ```
 ## Checkpoint
