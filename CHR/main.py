@@ -3,9 +3,9 @@ import argparse
 import torch
 from torch.nn.modules.loss import _WeightedLoss
 
-from .engine import MultiLabelMAPEngine
-from .models import resnet101_CHR
-from .ray import XrayClassification
+from CHR.engine import MultiLabelMAPEngine
+from CHR.models import resnet101_CHR
+from CHR.ray import XrayClassification
 
 parser = argparse.ArgumentParser(description='CHR Training')
 parser.add_argument('--data', metavar='DIR', default='./dataset/',
