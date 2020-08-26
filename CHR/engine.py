@@ -351,6 +351,7 @@ class Engine(object):
                         param_group['lr'] = param_group['lr'] * 0.1
                         print(param_group['lr'])
 
+
 class MulticlassEngine(Engine):
     def __init__(self, state):
         Engine.__init__(self, state)
@@ -407,6 +408,7 @@ class MulticlassEngine(Engine):
                     batch_time_current=self.state['batch_time_current'],
                     batch_time=batch_time, data_time_current=self.state['data_time_batch'],
                     data_time=data_time, loss_current=self.state['loss_batch'], loss=loss, top1=top1))
+
 
 class MulticlassTop5Engine(Engine):
     def __init__(self, state):
@@ -472,6 +474,7 @@ class MulticlassTop5Engine(Engine):
                     batch_time=batch_time, data_time_current=self.state['data_time_batch'],
                     data_time=data_time, loss_current=self.state['loss_batch'], loss=loss, top1=top1,
                     top5=top5))
+
 
 class MultiLabelMAPEngine(Engine):
     def __init__(self, state):

@@ -1,6 +1,6 @@
-import math
 from urllib.request import urlretrieve
 
+import math
 import torch
 from PIL import Image
 from tqdm import tqdm
@@ -128,7 +128,7 @@ class AveragePrecisionMeter(object):
         # store scores and targets
         offset = self.scores.size(0) if self.scores.dim() > 0 else 0
 
-        #print(offset + output.size(0), output.size(1))
+        # print(offset + output.size(0), output.size(1))
         self.scores.resize_(offset + output.size(0), output.size(1))
         self.targets.resize_(offset + target.size(0), target.size(1))
         self.scores.narrow(0, offset, output.size(0)).copy_(output)
