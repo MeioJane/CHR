@@ -1,7 +1,8 @@
-import os
-import shutil
 import time
 
+import numpy as np
+import os
+import shutil
 import torch
 import torch.backends.cudnn as cudnn
 import torch.nn.parallel
@@ -10,7 +11,6 @@ import torch.utils.data
 import torchnet as tnt
 import torchvision.transforms as transforms
 from tqdm import tqdm
-import numpy as np
 
 from CHR.util import AveragePrecisionMeter, Warp
 
@@ -24,7 +24,7 @@ class Engine(object):
         if self._state('train_image_size') is None:
             self.state['train_image_size'] = 256
         if self._state('test_image_size') is None:
-            self.state['test_image_size'] =224
+            self.state['test_image_size'] = 224
 
         if self._state('batch_size') is None:
             self.state['batch_size'] = 64
@@ -32,7 +32,7 @@ class Engine(object):
         if self._state('train_workers') is None:
             self.state['train_workers'] = 16
         if self._state('test_workers') is None:
-            self.state['test_workers'] =4
+            self.state['test_workers'] = 4
 
         if self._state('multi_gpu') is None:
             self.state['multi_gpu'] = False
@@ -126,37 +126,35 @@ class Engine(object):
         self.state['output'] = model(input_var)
 
         if training:
-            self.state['loss']=0
+            self.state['loss'] = 0
             for i in range(3):
                 output_1 = self.state['output'][i].data
                 n_class = output_1.size(1)
                 n_batch = output_1.size(0)
                 n_data = np.ones((n_batch, n_class))
-                n_target =1 - target_var.data.cpu().numpy()
+                n_target = 1 - target_var.data.cpu().numpy()
                 n_output = output_1.cpu().numpy()
-                index =np.where(n_output < -20)
-                if len(index)==0:
-                    self.state['loss'] =self.state['loss'] + torch.mean(criterion(self.state['output'][i], target_var))
+                index = np.where(n_output < -20)
+                if len(index) == 0:
+                    self.state['loss'] = self.state['loss'] + torch.mean(criterion(self.state['output'][i], target_var))
                     continue
-                n_data[index]=0
-                n_data = 1-n_data
+                n_data[index] = 0
+                n_data = 1 - n_data
                 n_data = torch.autograd.Variable(torch.from_numpy(n_data)).float().cuda()
                 n_target = torch.autograd.Variable(torch.from_numpy(n_target)).cuda()
-                mask =1- torch.mul(n_data, n_target)
-                self.state['loss'] =self.state['loss'] + torch.mean(torch.mul(mask, criterion(self.state['output'][i], target_var)))
-               
+                mask = 1 - torch.mul(n_data, n_target)
+                self.state['loss'] = self.state['loss'] + torch.mean(
+                    torch.mul(mask, criterion(self.state['output'][i], target_var)))
 
         if training:
             optimizer.zero_grad()
             self.state['loss'].backward()
-
 
             optimizer.step()
 
     def init_learning(self, model, criterion):
 
         if self._state('train_transform') is None:
-
             normalize = transforms.Normalize(mean=model.image_normalization_mean,
                                              std=model.image_normalization_std)
             self.state['train_transform'] = transforms.Compose([
@@ -209,7 +207,6 @@ class Engine(object):
                       .format(self.state['evaluate'], checkpoint['epoch']))
             else:
                 print("=> no checkpoint found at '{}'".format(self.state['resume']))
-
 
         if self.state['use_gpu']:
             train_loader.pin_memory = True
@@ -275,85 +272,84 @@ class Engine(object):
 
             if self.state['use_gpu']:
                 self.state['target'] = self.state['target'].cuda(async=True)
+                self.on_forward(True, model, criterion, data_loader, optimizer)
 
-            self.on_forward(True, model, criterion, data_loader, optimizer)
+                # measure elapsed time
+                self.state['batch_time_current'] = time.time() - end
+                self.state['batch_time'].add(self.state['batch_time_current'])
+                end = time.time()
+                # measure accuracy
+                self.on_end_batch(True, model, criterion, data_loader, optimizer)
 
-            # measure elapsed time
-            self.state['batch_time_current'] = time.time() - end
-            self.state['batch_time'].add(self.state['batch_time_current'])
+            self.on_end_epoch(True, model, criterion, data_loader, optimizer)
+
+        def validate(self, data_loader, model, criterion):
+
+            # switch to evaluate mode
+            model.eval()
+
+            self.on_start_epoch(False, model, criterion, data_loader)
+
+            if self.state['use_pb']:
+                data_loader = tqdm(data_loader, desc='Test')
+
             end = time.time()
-            # measure accuracy
-            self.on_end_batch(True, model, criterion, data_loader, optimizer)
+            for i, (input, target) in enumerate(data_loader):
+                # measure data loading time
+                self.state['iteration'] = i
+                self.state['data_time_batch'] = time.time() - end
+                self.state['data_time'].add(self.state['data_time_batch'])
 
-        self.on_end_epoch(True, model, criterion, data_loader, optimizer)
+                self.state['input'] = input
+                self.state['target'] = target
 
-    def validate(self, data_loader, model, criterion):
+                self.on_start_batch(False, model, criterion, data_loader)
 
-        # switch to evaluate mode
-        model.eval()
+                if self.state['use_gpu']:
+                    self.state['target'] = self.state['target'].cuda(async=True)
 
-        self.on_start_epoch(False, model, criterion, data_loader)
+                    self.on_forward(False, model, criterion, data_loader)
 
-        if self.state['use_pb']:
-            data_loader = tqdm(data_loader, desc='Test')
+                    # measure elapsed time
+                    self.state['batch_time_current'] = time.time() - end
+                    self.state['batch_time'].add(self.state['batch_time_current'])
+                    end = time.time()
+                    # measure accuracy
+                    self.on_end_batch(False, model, criterion, data_loader)
 
-        end = time.time()
-        for i, (input, target) in enumerate(data_loader):
-            # measure data loading time
-            self.state['iteration'] = i
-            self.state['data_time_batch'] = time.time() - end
-            self.state['data_time'].add(self.state['data_time_batch'])
+                score = self.on_end_epoch(False, model, criterion, data_loader)
 
-            self.state['input'] = input
-            self.state['target'] = target
+                return score
 
-            self.on_start_batch(False, model, criterion, data_loader)
+            def save_checkpoint(self, state, is_best, filename='checkpoint.pth.tar'):
+                if self._state('save_model_path') is not None:
+                    filename_ = filename
+                    filename = os.path.join(self.state['save_model_path'], filename_)
+                    if not os.path.exists(self.state['save_model_path']):
+                        os.makedirs(self.state['save_model_path'])
+                print('save model {filename}'.format(filename=filename))
+                torch.save(state, filename)
+                if is_best:
+                    filename_best = 'model_best.pth.tar'
+                    if self._state('save_model_path') is not None:
+                        filename_best = os.path.join(self.state['save_model_path'], filename_best)
+                    shutil.copyfile(filename, filename_best)
+                    if self._state('save_model_path') is not None:
+                        # if self._state('filename_previous_best') is not None:
+                        # os.remove(self._state('filename_previous_best'))
+                        filename_best = os.path.join(self.state['save_model_path'],
+                                                     'model_best_{score:.4f}.pth.tar'.format(score=state['best_score']))
+                        shutil.copyfile(filename, filename_best)
+                        self.state['filename_previous_best'] = filename_best
 
-            if self.state['use_gpu']:
-                self.state['target'] = self.state['target'].cuda(async=True)
-
-            self.on_forward(False, model, criterion, data_loader)
-
-            # measure elapsed time
-            self.state['batch_time_current'] = time.time() - end
-            self.state['batch_time'].add(self.state['batch_time_current'])
-            end = time.time()
-            # measure accuracy
-            self.on_end_batch(False, model, criterion, data_loader)
-
-        score = self.on_end_epoch(False, model, criterion, data_loader)
-
-        return score
-
-    def save_checkpoint(self, state, is_best, filename='checkpoint.pth.tar'):
-        if self._state('save_model_path') is not None:
-            filename_ = filename
-            filename = os.path.join(self.state['save_model_path'], filename_)
-            if not os.path.exists(self.state['save_model_path']):
-                os.makedirs(self.state['save_model_path'])
-        print('save model {filename}'.format(filename=filename))
-        torch.save(state, filename)
-        if is_best:
-            filename_best = 'model_best.pth.tar'
-            if self._state('save_model_path') is not None:
-                filename_best = os.path.join(self.state['save_model_path'], filename_best)
-            shutil.copyfile(filename, filename_best)
-            if self._state('save_model_path') is not None:
-               # if self._state('filename_previous_best') is not None:
-                   # os.remove(self._state('filename_previous_best'))
-                filename_best = os.path.join(self.state['save_model_path'], 'model_best_{score:.4f}.pth.tar'.format(score=state['best_score']))
-                shutil.copyfile(filename, filename_best)
-                self.state['filename_previous_best'] = filename_best
-
-    def adjust_learning_rate(self, optimizer):
-        """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-        # lr = args.lr * (0.1 ** (epoch // 30))
-        if self.state['epoch'] is not 0 and self.state['epoch'] in self.state['epoch_step']:
-            print('update learning rate')
-            for param_group in optimizer.state_dict()['param_groups']:
-                param_group['lr'] = param_group['lr'] * 0.1
-                print(param_group['lr'])
-
+            def adjust_learning_rate(self, optimizer):
+                """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
+                # lr = args.lr * (0.1 ** (epoch // 30))
+                if self.state['epoch'] is not 0 and self.state['epoch'] in self.state['epoch_step']:
+                    print('update learning rate')
+                    for param_group in optimizer.state_dict()['param_groups']:
+                        param_group['lr'] = param_group['lr'] * 0.1
+                        print(param_group['lr'])
 
 class MulticlassEngine(Engine):
     def __init__(self, state):
@@ -385,7 +381,8 @@ class MulticlassEngine(Engine):
         # measure accuracy
         self.state['classacc'].add(self.state['output'].data, self.state['target'])
 
-        if display and self.state['print_freq'] != 0 and self.state['iteration'] % self.state['print_freq'] == 0:
+        if display and self.state['print_freq'] != 0 and self.state['iteration'] % self.state[
+            'print_freq'] == 0:
             top1 = self.state['classacc'].value()[0]
             loss = self.state['meter_loss'].value()[0]
             batch_time = self.state['batch_time'].value()[0]
@@ -406,10 +403,10 @@ class MulticlassEngine(Engine):
                       'Data {data_time_current:.3f} ({data_time:.3f})\t'
                       'Loss {loss_current:.4f} ({loss:.4f})\t'
                       'Prec@1 {top1:.3f}'.format(
-                    self.state['iteration'], len(data_loader), batch_time_current=self.state['batch_time_current'],
+                    self.state['iteration'], len(data_loader),
+                    batch_time_current=self.state['batch_time_current'],
                     batch_time=batch_time, data_time_current=self.state['data_time_batch'],
                     data_time=data_time, loss_current=self.state['loss_batch'], loss=loss, top1=top1))
-
 
 class MulticlassTop5Engine(Engine):
     def __init__(self, state):
@@ -445,7 +442,8 @@ class MulticlassTop5Engine(Engine):
         # measure accuracy
         self.state['classacc'].add(self.state['output'].data, self.state['target'])
 
-        if display and self.state['print_freq'] != 0 and self.state['iteration'] % self.state['print_freq'] == 0:
+        if display and self.state['print_freq'] != 0 and self.state['iteration'] % self.state[
+            'print_freq'] == 0:
             top1 = self.state['classacc'].value()[0]
             top5 = self.state['classacc'].value()[1]
             loss = self.state['meter_loss'].value()[0]
@@ -469,10 +467,11 @@ class MulticlassTop5Engine(Engine):
                       'Loss {loss_current:.4f} ({loss:.4f})\t'
                       'Prec@1 {top1:.3f}\t'
                       'Prec@5 {top5:.3f}'.format(
-                    self.state['iteration'], len(data_loader), batch_time_current=self.state['batch_time_current'],
+                    self.state['iteration'], len(data_loader),
+                    batch_time_current=self.state['batch_time_current'],
                     batch_time=batch_time, data_time_current=self.state['data_time_batch'],
-                    data_time=data_time, loss_current=self.state['loss_batch'], loss=loss, top1=top1, top5=top5))
-
+                    data_time=data_time, loss_current=self.state['loss_batch'], loss=loss, top1=top1,
+                    top5=top5))
 
 class MultiLabelMAPEngine(Engine):
     def __init__(self, state):
@@ -493,12 +492,12 @@ class MultiLabelMAPEngine(Engine):
         if display:
             if training:
                 # print(model.module.spatial_pooling)
-                #print(self.state['epoch'], loss.cpu().numpy()[0], map)
+                # print(self.state['epoch'], loss.cpu().numpy()[0], map)
                 print('Epoch: [{0}]\t'
                       'Loss {loss:.4f}\t'
                       'mAP {map:.3f}'.format(self.state['epoch'], loss=loss.cpu().numpy()[0], map=map))
             else:
-                #print(self.state['ap_meter'].value())
+                # print(self.state['ap_meter'].value())
 
                 print('Test: \t Loss {loss:.4f}\t  mAP {map:.3f}'.format(loss=loss.cpu().numpy()[0], map=map))
 
@@ -521,7 +520,8 @@ class MultiLabelMAPEngine(Engine):
         # measure mAP
         self.state['ap_meter'].add(self.state['output'][0].data, self.state['target_gt'])
 
-        if display and self.state['print_freq'] != 0 and self.state['iteration'] % self.state['print_freq'] == 0:
+        if display and self.state['print_freq'] != 0 and self.state['iteration'] % self.state[
+            'print_freq'] == 0:
             loss = self.state['meter_loss'].value()[0]
             batch_time = self.state['batch_time'].value()[0]
             data_time = self.state['data_time'].value()[0]
@@ -539,6 +539,7 @@ class MultiLabelMAPEngine(Engine):
                       'Time {batch_time_current:.3f} ({batch_time:.3f})\t'
                       'Data {data_time_current:.3f} ({data_time:.3f})\t'
                       'Loss {loss_current:.4f} ({loss:.4f})'.format(
-                    self.state['iteration'], len(data_loader), batch_time_current=self.state['batch_time_current'],
+                    self.state['iteration'], len(data_loader),
+                    batch_time_current=self.state['batch_time_current'],
                     batch_time=batch_time, data_time_current=self.state['data_time_batch'],
                     data_time=data_time, loss_current=self.state['loss_batch'], loss=loss))

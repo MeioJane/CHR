@@ -1,4 +1,4 @@
-#!usr/bin/env bash
+#!/bin/bash
 # select gpu devices
 export CUDA_VISIBLE_DEVICES=6,7
 

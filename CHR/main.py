@@ -1,15 +1,13 @@
 import argparse
 
 import torch
-import torch.nn as nn
-
-from CHR.engine import MultiLabelMAPEngine
-from CHR.models import resnet101_CHR
-from CHR.ray import XrayClassification
 from torch.nn.modules.loss import _WeightedLoss
+from .engine import MultiLabelMAPEngine
+from .models import resnet101_CHR
+from .ray import XrayClassification
 
 parser = argparse.ArgumentParser(description='CHR Training')
-parser.add_argument('--data', metavar='DIR',default='./dataset/',
+parser.add_argument('--data', metavar='DIR', default='./dataset/',
                     help='path to dataset (e.g. ../data/')
 parser.add_argument('--image-size', '-i', default=224, type=int,
                     metavar='N', help='image size (default: 224)')
@@ -42,6 +40,7 @@ parser.add_argument('--alpha', default=1, type=float,
 parser.add_argument('--maps', default=1, type=int,
                     metavar='N', help='number of maps per class (default: 1)')
 
+
 def binary_cross_entropy(input, target, eps=1e-10):
     '''if not (target.size() == input.size()):
         warnings.warn("Using a target size ({}) that is different to the input size ({}) is deprecated. "
@@ -55,9 +54,8 @@ def binary_cross_entropy(input, target, eps=1e-10):
         weight = weight.expand(new_size)
         if torch.is_tensor(weight):
             weight = Variable(weight)'''
-    input=torch.sigmoid(input)
-    return -(target*torch.log(input+eps)+(1-target)*torch.log(1-input+eps))
-
+    input = torch.sigmoid(input)
+    return -(target * torch.log(input + eps) + (1 - target) * torch.log(1 - input + eps))
 
 
 class MultiLabelSoftMarginLoss(_WeightedLoss):
@@ -66,16 +64,12 @@ class MultiLabelSoftMarginLoss(_WeightedLoss):
         return binary_cross_entropy(input, target)
 
 
-
-
 def main_ray():
     global args, best_prec1, use_gpu
     args = parser.parse_args()
 
-    args.data='/DATA/disk1/mcj/dataset/'
+    args.data = '/DATA/disk1/mcj/dataset/'
     args.resume = './CHR/models-/checkpoint.pth.tar'
-
-
 
     use_gpu = torch.cuda.is_available()
 
@@ -100,7 +94,7 @@ def main_ray():
              'evaluate': args.evaluate, 'resume': args.resume}
     state['difficult_examples'] = True
     state['save_model_path'] = './CHR/models-'
-    state['epoch_step']={20}
+    state['epoch_step'] = {20}
 
     engine = MultiLabelMAPEngine(state)
     engine.learning(model, criterion, train_dataset, val_dataset, optimizer)
