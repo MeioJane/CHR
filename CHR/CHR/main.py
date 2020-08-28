@@ -1,15 +1,13 @@
 import argparse
 
 import torch
-import torch.nn as nn
-
-from CHR.engine import MultiLabelMAPEngine
-from CHR.models import resnet101_CHR
-from CHR.ray import XrayClassification
+from .engine import MultiLabelMAPEngine
+from .models import resnet101_CHR
+from .ray import XrayClassification
 from torch.nn.modules.loss import _WeightedLoss
 
 parser = argparse.ArgumentParser(description='CHR Training')
-parser.add_argument('--data', metavar='DIR',default='./dataset/',
+parser.add_argument('--data', metavar='DIR', default='./dataset/',
                     help='path to dataset (e.g. ../data/')
 parser.add_argument('--image-size', '-i', default=224, type=int,
                     metavar='N', help='image size (default: 224)')
@@ -20,7 +18,7 @@ parser.add_argument('--epochs', default=15, type=int, metavar='N',
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
 parser.add_argument('-b', '--batch-size', default=16, type=int,
-                    metavar='N', help='mini-batch size (default: 256)')
+                    metavar='N', help='mini-batch size (default: 16)')
 parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
                     metavar='LR', help='initial learning rate')
 parser.add_argument('--lrp', '--learning-rate-pretrained', default=0.1, type=float,
@@ -42,6 +40,7 @@ parser.add_argument('--alpha', default=1, type=float,
 parser.add_argument('--maps', default=1, type=int,
                     metavar='N', help='number of maps per class (default: 1)')
 
+
 def binary_cross_entropy(input, target, eps=1e-10):
     '''if not (target.size() == input.size()):
         warnings.warn("Using a target size ({}) that is different to the input size ({}) is deprecated. "
@@ -55,9 +54,8 @@ def binary_cross_entropy(input, target, eps=1e-10):
         weight = weight.expand(new_size)
         if torch.is_tensor(weight):
             weight = Variable(weight)'''
-    input=torch.sigmoid(input)
-    return -(target*torch.log(input+eps)+(1-target)*torch.log(1-input+eps))
-
+    input = torch.sigmoid(input)
+    return -(target * torch.log(input + eps) + (1 - target) * torch.log(1 - input + eps))
 
 
 class MultiLabelSoftMarginLoss(_WeightedLoss):
@@ -66,22 +64,18 @@ class MultiLabelSoftMarginLoss(_WeightedLoss):
         return binary_cross_entropy(input, target)
 
 
-
-
 def main_ray():
     global args, best_prec1, use_gpu
     args = parser.parse_args()
 
-    args.data='/DATA/disk1/mcj/dataset/'
-    args.resume = './CHR/models-/checkpoint.pth.tar'
-
-
+    # args.data = "/data2/mhassan/dhs/dataset/sixray/dataset"
+    args.resume = "./CHR/models-/checkpoint.pth.tar"
 
     use_gpu = torch.cuda.is_available()
 
     # define dataset
     train_dataset = XrayClassification(args.data, 'train')
-    val_dataset = XrayClassification(args.data, 'test_new')
+    val_dataset = XrayClassification(args.data, 'test')
     num_classes = 5
 
     # load model
@@ -97,10 +91,8 @@ def main_ray():
                                 weight_decay=args.weight_decay)
 
     state = {'batch_size': args.batch_size, 'image_size': args.image_size, 'max_epochs': args.epochs,
-             'evaluate': args.evaluate, 'resume': args.resume}
-    state['difficult_examples'] = True
-    state['save_model_path'] = './CHR/models-'
-    state['epoch_step']={20}
+             'evaluate': args.evaluate, 'resume': args.resume, 'difficult_examples': True,
+             'save_model_path': './CHR/models-', 'epoch_step': {20}}
 
     engine = MultiLabelMAPEngine(state)
     engine.learning(model, criterion, train_dataset, val_dataset, optimizer)

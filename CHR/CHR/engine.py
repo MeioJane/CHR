@@ -2,6 +2,7 @@ import os
 import shutil
 import time
 
+import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
 import torch.nn.parallel
@@ -10,9 +11,8 @@ import torch.utils.data
 import torchnet as tnt
 import torchvision.transforms as transforms
 from tqdm import tqdm
-import numpy as np
 
-from CHR.util import AveragePrecisionMeter, Warp
+from .util import AveragePrecisionMeter, Warp
 
 
 class Engine(object):
@@ -24,7 +24,7 @@ class Engine(object):
         if self._state('train_image_size') is None:
             self.state['train_image_size'] = 256
         if self._state('test_image_size') is None:
-            self.state['test_image_size'] =224
+            self.state['test_image_size'] = 224
 
         if self._state('batch_size') is None:
             self.state['batch_size'] = 64
@@ -32,7 +32,7 @@ class Engine(object):
         if self._state('train_workers') is None:
             self.state['train_workers'] = 16
         if self._state('test_workers') is None:
-            self.state['test_workers'] =4
+            self.state['test_workers'] = 4
 
         if self._state('multi_gpu') is None:
             self.state['multi_gpu'] = False
@@ -88,7 +88,7 @@ class Engine(object):
     def on_end_batch(self, training, model, criterion, data_loader, optimizer=None, display=True):
 
         # record loss
-        self.state['loss_batch'] = self.state['loss'].data
+        self.state['loss_batch'] = self.state['loss'].data.cpu().numpy()
         self.state['meter_loss'].add(self.state['loss_batch'])
 
         if display and self.state['print_freq'] != 0 and self.state['iteration'] % self.state['print_freq'] == 0:
@@ -126,37 +126,35 @@ class Engine(object):
         self.state['output'] = model(input_var)
 
         if training:
-            self.state['loss']=0
+            self.state['loss'] = 0
             for i in range(3):
                 output_1 = self.state['output'][i].data
                 n_class = output_1.size(1)
                 n_batch = output_1.size(0)
                 n_data = np.ones((n_batch, n_class))
-                n_target =1 - target_var.data.cpu().numpy()
+                n_target = 1 - target_var.data.cpu().numpy()
                 n_output = output_1.cpu().numpy()
-                index =np.where(n_output < -20)
-                if len(index)==0:
-                    self.state['loss'] =self.state['loss'] + torch.mean(criterion(self.state['output'][i], target_var))
+                index = np.where(n_output < -20)
+                if len(index) == 0:
+                    self.state['loss'] = self.state['loss'] + torch.mean(criterion(self.state['output'][i], target_var))
                     continue
-                n_data[index]=0
-                n_data = 1-n_data
+                n_data[index] = 0
+                n_data = 1 - n_data
                 n_data = torch.autograd.Variable(torch.from_numpy(n_data)).float().cuda()
                 n_target = torch.autograd.Variable(torch.from_numpy(n_target)).cuda()
-                mask =1- torch.mul(n_data, n_target)
-                self.state['loss'] =self.state['loss'] + torch.mean(torch.mul(mask, criterion(self.state['output'][i], target_var)))
-               
+                mask = 1 - torch.mul(n_data, n_target)
+                self.state['loss'] = self.state['loss'] + torch.mean(
+                    torch.mul(mask, criterion(self.state['output'][i], target_var)))
 
         if training:
             optimizer.zero_grad()
             self.state['loss'].backward()
-
 
             optimizer.step()
 
     def init_learning(self, model, criterion):
 
         if self._state('train_transform') is None:
-
             normalize = transforms.Normalize(mean=model.image_normalization_mean,
                                              std=model.image_normalization_std)
             self.state['train_transform'] = transforms.Compose([
@@ -209,7 +207,6 @@ class Engine(object):
                       .format(self.state['evaluate'], checkpoint['epoch']))
             else:
                 print("=> no checkpoint found at '{}'".format(self.state['resume']))
-
 
         if self.state['use_gpu']:
             train_loader.pin_memory = True
@@ -339,9 +336,10 @@ class Engine(object):
                 filename_best = os.path.join(self.state['save_model_path'], filename_best)
             shutil.copyfile(filename, filename_best)
             if self._state('save_model_path') is not None:
-               # if self._state('filename_previous_best') is not None:
-                   # os.remove(self._state('filename_previous_best'))
-                filename_best = os.path.join(self.state['save_model_path'], 'model_best_{score:.4f}.pth.tar'.format(score=state['best_score']))
+                # if self._state('filename_previous_best') is not None:
+                # os.remove(self._state('filename_previous_best'))
+                filename_best = os.path.join(self.state['save_model_path'],
+                                             'model_best_{score:.4f}.pth.tar'.format(score=state['best_score']))
                 shutil.copyfile(filename, filename_best)
                 self.state['filename_previous_best'] = filename_best
 
@@ -493,12 +491,12 @@ class MultiLabelMAPEngine(Engine):
         if display:
             if training:
                 # print(model.module.spatial_pooling)
-                #print(self.state['epoch'], loss.cpu().numpy()[0], map)
+                # print(self.state['epoch'], loss.cpu().numpy()[0], map)
                 print('Epoch: [{0}]\t'
                       'Loss {loss:.4f}\t'
                       'mAP {map:.3f}'.format(self.state['epoch'], loss=loss.cpu().numpy()[0], map=map))
             else:
-                #print(self.state['ap_meter'].value())
+                # print(self.state['ap_meter'].value())
 
                 print('Test: \t Loss {loss:.4f}\t  mAP {map:.3f}'.format(loss=loss.cpu().numpy()[0], map=map))
 

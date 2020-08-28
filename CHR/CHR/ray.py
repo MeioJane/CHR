@@ -1,19 +1,13 @@
 import csv
 import os
 import os.path
-import tarfile
-from urllib.parse import urlparse
 
 import numpy as np
 import torch
 import torch.utils.data as data
 from PIL import Image
 
-from CHR import util
-
-
-object_categories =['Gun','Knife','Wrench','Pliers','Scissors']
-
+object_categories = ['Gun', 'Knife', 'Wrench', 'Pliers', 'Scissors']
 
 
 def read_image_label(file):
@@ -28,9 +22,6 @@ def read_image_label(file):
             # data.append([name, label])
             # print('%s  %d' % (name, label))
     return data
-
-
-
 
 
 def write_object_labels_csv(file, labeled_data):
@@ -73,21 +64,19 @@ def read_object_labels_csv(file, header=True):
     return images
 
 
-
 class XrayClassification(data.Dataset):
     def __init__(self, root, set, transform=None, target_transform=None):
         self.root = root
         self.path_devkit = os.path.join(root)
-        self.path_images = os.path.join(root,  'JPEGImage')
+        self.path_images = os.path.join(root, 'JPEGImage')
         self.set = set
         self.transform = transform
         self.target_transform = target_transform
 
-
         # define path of csv file
-        path_csv = os.path.join(self.root, 'ImageSet','train_test_10-5')
+        path_csv = os.path.join(self.root, 'ImageSet', '100')
         # define filename of csv file
-        file_csv = os.path.join(path_csv,  set + '.csv')
+        file_csv = os.path.join(path_csv, set + '.csv')
 
         # create the csv file if necessary
         if not os.path.exists(file_csv):
