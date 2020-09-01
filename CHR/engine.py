@@ -283,73 +283,73 @@ class Engine(object):
 
             self.on_end_epoch(True, model, criterion, data_loader, optimizer)
 
-        def validate(self, data_loader, model, criterion):
+    def validate(self, data_loader, model, criterion):
 
-            # switch to evaluate mode
-            model.eval()
+        # switch to evaluate mode
+        model.eval()
 
-            self.on_start_epoch(False, model, criterion, data_loader)
+        self.on_start_epoch(False, model, criterion, data_loader)
 
-            if self.state['use_pb']:
-                data_loader = tqdm(data_loader, desc='Test')
+        if self.state['use_pb']:
+            data_loader = tqdm(data_loader, desc='Test')
 
-            end = time.time()
-            for i, (input, target) in enumerate(data_loader):
-                # measure data loading time
-                self.state['iteration'] = i
-                self.state['data_time_batch'] = time.time() - end
-                self.state['data_time'].add(self.state['data_time_batch'])
+        end = time.time()
+        for i, (input, target) in enumerate(data_loader):
+            # measure data loading time
+            self.state['iteration'] = i
+            self.state['data_time_batch'] = time.time() - end
+            self.state['data_time'].add(self.state['data_time_batch'])
 
-                self.state['input'] = input
-                self.state['target'] = target
+            self.state['input'] = input
+            self.state['target'] = target
 
-                self.on_start_batch(False, model, criterion, data_loader)
+            self.on_start_batch(False, model, criterion, data_loader)
 
-                if self.state['use_gpu']:
-                    self.state['target'] = self.state['target'].cuda(async=True)
+            if self.state['use_gpu']:
+                self.state['target'] = self.state['target'].cuda(async=True)
 
-                    self.on_forward(False, model, criterion, data_loader)
+                self.on_forward(False, model, criterion, data_loader)
 
-                    # measure elapsed time
-                    self.state['batch_time_current'] = time.time() - end
-                    self.state['batch_time'].add(self.state['batch_time_current'])
-                    end = time.time()
-                    # measure accuracy
-                    self.on_end_batch(False, model, criterion, data_loader)
+                # measure elapsed time
+                self.state['batch_time_current'] = time.time() - end
+                self.state['batch_time'].add(self.state['batch_time_current'])
+                end = time.time()
+                # measure accuracy
+                self.on_end_batch(False, model, criterion, data_loader)
 
-                score = self.on_end_epoch(False, model, criterion, data_loader)
+            score = self.on_end_epoch(False, model, criterion, data_loader)
 
-                return score
+            return score
 
-            def save_checkpoint(self, state, is_best, filename='checkpoint.pth.tar'):
-                if self._state('save_model_path') is not None:
-                    filename_ = filename
-                    filename = os.path.join(self.state['save_model_path'], filename_)
-                    if not os.path.exists(self.state['save_model_path']):
-                        os.makedirs(self.state['save_model_path'])
-                print('save model {filename}'.format(filename=filename))
-                torch.save(state, filename)
-                if is_best:
-                    filename_best = 'model_best.pth.tar'
-                    if self._state('save_model_path') is not None:
-                        filename_best = os.path.join(self.state['save_model_path'], filename_best)
-                    shutil.copyfile(filename, filename_best)
-                    if self._state('save_model_path') is not None:
-                        # if self._state('filename_previous_best') is not None:
-                        # os.remove(self._state('filename_previous_best'))
-                        filename_best = os.path.join(self.state['save_model_path'],
-                                                     'model_best_{score:.4f}.pth.tar'.format(score=state['best_score']))
-                        shutil.copyfile(filename, filename_best)
-                        self.state['filename_previous_best'] = filename_best
+    def save_checkpoint(self, state, is_best, filename='checkpoint.pth.tar'):
+        if self._state('save_model_path') is not None:
+            filename_ = filename
+            filename = os.path.join(self.state['save_model_path'], filename_)
+            if not os.path.exists(self.state['save_model_path']):
+                os.makedirs(self.state['save_model_path'])
+        print('save model {filename}'.format(filename=filename))
+        torch.save(state, filename)
+        if is_best:
+            filename_best = 'model_best.pth.tar'
+            if self._state('save_model_path') is not None:
+                filename_best = os.path.join(self.state['save_model_path'], filename_best)
+            shutil.copyfile(filename, filename_best)
+            if self._state('save_model_path') is not None:
+                # if self._state('filename_previous_best') is not None:
+                # os.remove(self._state('filename_previous_best'))
+                filename_best = os.path.join(self.state['save_model_path'],
+                                             'model_best_{score:.4f}.pth.tar'.format(score=state['best_score']))
+                shutil.copyfile(filename, filename_best)
+                self.state['filename_previous_best'] = filename_best
 
-            def adjust_learning_rate(self, optimizer):
-                """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-                # lr = args.lr * (0.1 ** (epoch // 30))
-                if self.state['epoch'] is not 0 and self.state['epoch'] in self.state['epoch_step']:
-                    print('update learning rate')
-                    for param_group in optimizer.state_dict()['param_groups']:
-                        param_group['lr'] = param_group['lr'] * 0.1
-                        print(param_group['lr'])
+    def adjust_learning_rate(self, optimizer):
+        """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
+        # lr = args.lr * (0.1 ** (epoch // 30))
+        if self.state['epoch'] is not 0 and self.state['epoch'] in self.state['epoch_step']:
+            print('update learning rate')
+            for param_group in optimizer.state_dict()['param_groups']:
+                param_group['lr'] = param_group['lr'] * 0.1
+                print(param_group['lr'])
 
 
 class MulticlassEngine(Engine):
