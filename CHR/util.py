@@ -1,6 +1,6 @@
+import math
 from urllib.request import urlretrieve
 
-import math
 import torch
 from PIL import Image
 from tqdm import tqdm
@@ -91,12 +91,10 @@ class AveragePrecisionMeter(object):
                 indicates the probability of the example belonging to each of
                 the K classes, according to the model. The probabilities should
                 sum to one over all classes
-            target (Tensor): binary NxK tensort that encodes which of the K
+            target (Tensor): binary NxK tensor that encodes which of the K
                 classes are associated with the N-th input
                     (eg: a row [0, 1, 0, 1] indicates that the example is
                          associated with classes 2 and 4)
-            weight (optional, Tensor): Nx1 tensor representing the weight for
-                each example (each weight > 0)
         """
         if not torch.is_tensor(output):
             output = torch.from_numpy(output)
@@ -174,5 +172,6 @@ class AveragePrecisionMeter(object):
             total_count += 1
             if label == 1:
                 precision_at_i += pos_count / total_count
+        if pos_count==0: pos_count = 1e-8  # Adding a very small number to avoid division-by-zero
         precision_at_i /= pos_count
         return precision_at_i
