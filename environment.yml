@@ -1,0 +1,33 @@
+name: chr
+channels:
+  - pytorch
+  - defaults
+dependencies:
+  - _libgcc_mutex=0.1=main
+  - blas=1.0=mkl
+  - ca-certificates=2020.7.22=0
+  - certifi=2018.8.24=py35_1
+  - cffi=1.11.5=py35he75722e_1
+  - cuda90=1.0=h6433d27_0
+  - intel-openmp=2020.2=254
+  - libedit=3.1.20191231=h14c3975_1
+  - libffi=3.2.1=hd88cf55_4
+  - libgcc-ng=9.1.0=hdf63c60_0
+  - libgfortran-ng=7.3.0=hdf63c60_0
+  - libstdcxx-ng=9.1.0=hdf63c60_0
+  - mkl=2020.2=256
+  - ncurses=6.2=he6710b0_1
+  - numpy=1.14.2=py35hdbf6ddf_0
+  - openssl=1.0.2u=h7b6447c_0
+  - pip=10.0.1=py35_0
+  - pycparser=2.20=py_2
+  - python=3.5.6=hc3d631a_0
+  - pytorch=0.3.1=py35_cuda9.0.176_cudnn7.0.5_2
+  - readline=7.0=h7b6447c_5
+  - setuptools=40.2.0=py35_0
+  - sqlite=3.33.0=h62c20be_0
+  - tk=8.6.10=hbc83047_0
+  - wheel=0.35.1=py_0
+  - xz=5.2.5=h7b6447c_0
+  - zlib=1.2.11=h7b6447c_3
+prefix: /home/mhassan/miniconda3/envs/chr
