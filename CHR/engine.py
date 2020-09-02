@@ -488,7 +488,6 @@ class MultiLabelMAPEngine(Engine):
         self.state['ap_meter'].reset()
 
     def on_end_epoch(self, training, model, criterion, data_loader, optimizer=None, display=True):
-
         map = 100 * self.state['ap_meter'].value().mean()
         loss = self.state['meter_loss'].value()[0]
 
