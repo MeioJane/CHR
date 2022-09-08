@@ -23,7 +23,7 @@
     bash CHR/runme.sh
     ```
 ## Checkpoint
-If you only want to test images, you can download here. [Resnet101-CHR](链接: https://pan.baidu.com/s/19wuNL8KaZ5vm-yiJfu2CZA?pwd=tunq 提取码: tunq 复制这段内容后打开百度网盘手机App，操作更方便哦)
+If you only want to test images, you can download [here](https://pan.baidu.com/s/19wuNL8KaZ5vm-yiJfu2CZA?pwd=tunq).
 ## Citation 
 If you use the code in your research, please cite:
 
